@@ -134,6 +134,7 @@ sub accept_loop {
 
     while (! defined $max_reqs_per_child || $proc_req_count < $max_reqs_per_child) {
         my ($conn, $peer, $listen) = $acceptor->();
+        $self->{can_exit} = 0;
         $self->{_is_deferred_accept} = $listen->{_using_defer_accept};
         defined($conn->blocking(0))
             or die "failed to set socket to nonblocking mode:$!";
@@ -182,7 +183,11 @@ sub accept_loop {
                 $conn->close;
                 return;
             }
-            last unless $keepalive;
+
+            unless ($keepalive) {
+                $self->{can_exit} = 1;
+                last;
+            };
             # TODO add special cases for clients with broken keep-alive support, as well as disabling keep-alive for HTTP/1.0 proxies
         }
         $conn->close;
